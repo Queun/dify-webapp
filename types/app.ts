@@ -1,6 +1,7 @@
 import type { Annotation } from './log'
 import type { Locale } from '@/i18n'
 import type { ThoughtItem } from '@/app/components/chat/type'
+import type { ParsedMessage } from '@/utils/message-parser'
 
 export interface PromptVariable {
   key: string
@@ -94,6 +95,12 @@ export type ChatItem = IChatItem & {
   isError?: boolean
   workflow_run_id?: string
   workflowProcess?: WorkflowProcess
+  /**
+   * Parsed message content (RPA/PSA data)
+   * Cached to avoid re-parsing on every render
+   * @internal
+   */
+  _parsed?: ParsedMessage
 }
 
 export interface ResponseHolder {}

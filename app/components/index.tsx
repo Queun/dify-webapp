@@ -22,6 +22,7 @@ import AppUnavailable from '@/app/components/app-unavailable'
 import { API_KEY, APP_ID, APP_INFO, isShowPrompt, promptTemplate } from '@/config'
 import type { Annotation as AnnotationType } from '@/types/log'
 import { addFileInfos, sortAgentSorts } from '@/utils/tools'
+import { parseMessageContent } from '@/utils/message-parser'
 
 export interface IMainProps {
   params: any
@@ -138,13 +139,19 @@ const Main: FC<IMainProps> = () => {
             message_files: item.message_files?.filter((file: any) => file.belongs_to === 'user') || [],
 
           })
+
+          // Parse RPA/PSA content for historical messages
+          const answerContent = item.answer || ''
+          const parsedMessage = parseMessageContent(answerContent)
+
           newChatList.push({
             id: item.id,
-            content: item.answer,
+            content: answerContent,
             agent_thoughts: addFileInfos(item.agent_thoughts ? sortAgentSorts(item.agent_thoughts) : item.agent_thoughts, item.message_files),
             feedback: item.feedback,
             isAnswer: true,
             message_files: item.message_files?.filter((file: any) => file.belongs_to === 'assistant') || [],
+            _parsed: parsedMessage, // Cache parsed result
           })
         })
         setChatList(newChatList)
@@ -293,7 +300,7 @@ const Main: FC<IMainProps> = () => {
   }, [])
 
   const [isResponding, { setTrue: setRespondingTrue, setFalse: setRespondingFalse }] = useBoolean(false)
-  const [abortController, setAbortController] = useState<AbortController | null>(null)
+  const [_abortController, setAbortController] = useState<AbortController | null>(null)
   const { notify } = Toast
   const logError = (message: string) => {
     notify({ type: 'error', message })
@@ -315,12 +322,12 @@ const Main: FC<IMainProps> = () => {
     return true
   }
 
-  const [controlFocus, setControlFocus] = useState(0)
-  const [openingSuggestedQuestions, setOpeningSuggestedQuestions] = useState<string[]>([])
-  const [messageTaskId, setMessageTaskId] = useState('')
-  const [hasStopResponded, setHasStopResponded, getHasStopResponded] = useGetState(false)
-  const [isRespondingConIsCurrCon, setIsRespondingConCurrCon, getIsRespondingConIsCurrCon] = useGetState(true)
-  const [userQuery, setUserQuery] = useState('')
+  const [_controlFocus, _setControlFocus] = useState(0)
+  const [_openingSuggestedQuestions, _setOpeningSuggestedQuestions] = useState<string[]>([])
+  const [_messageTaskId, setMessageTaskId] = useState('')
+  const [_hasStopResponded, _setHasStopResponded, _getHasStopResponded] = useGetState(false)
+  const [_isRespondingConIsCurrCon, setIsRespondingConCurrCon, _getIsRespondingConIsCurrCon] = useGetState(true)
+  const [_userQuery, _setUserQuery] = useState('')
 
   const updateCurrentQA = ({
     responseItem,
@@ -522,6 +529,12 @@ const Main: FC<IMainProps> = () => {
         })
       },
       onMessageEnd: (messageEnd) => {
+        // Parse RPA/PSA content for new messages (streaming completed)
+        const finalContent = responseItem.content || ''
+        if (finalContent) {
+          responseItem._parsed = parseMessageContent(finalContent)
+        }
+
         if (messageEnd.metadata?.annotation_reply) {
           responseItem.id = messageEnd.id
           responseItem.annotation = ({
@@ -570,8 +583,8 @@ const Main: FC<IMainProps> = () => {
           draft.splice(draft.findIndex(item => item.id === placeholderAnswerId), 1)
         }))
       },
-      onWorkflowStarted: ({ workflow_run_id, task_id }) => {
-        // taskIdRef.current = task_id
+      onWorkflowStarted: ({ workflow_run_id, task_id: _task_id }) => {
+        // taskIdRef.current = _task_id
         responseItem.workflow_run_id = workflow_run_id
         responseItem.workflowProcess = {
           status: WorkflowRunningStatus.Running,
