@@ -23,6 +23,7 @@ import { API_KEY, APP_ID, APP_INFO, isShowPrompt, promptTemplate } from '@/confi
 import type { Annotation as AnnotationType } from '@/types/log'
 import { addFileInfos, sortAgentSorts } from '@/utils/tools'
 import { parseMessageContent } from '@/utils/message-parser'
+import { getCurrentUser } from '@/utils/auth'
 
 export interface IMainProps {
   params: any
@@ -378,10 +379,12 @@ const Main: FC<IMainProps> = () => {
       })
     }
 
+    const currentUser = getCurrentUser()
     const data: Record<string, any> = {
       inputs: toServerInputs,
       query: message,
       conversation_id: isNewConversation ? null : currConversationId,
+      user: currentUser?.studentId || 'anonymous', // 传递用户标识到Dify
     }
 
     if (files && files?.length > 0) {

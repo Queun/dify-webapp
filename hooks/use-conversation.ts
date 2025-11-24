@@ -2,26 +2,40 @@ import { useState } from 'react'
 import produce from 'immer'
 import { useGetState } from 'ahooks'
 import type { ConversationItem } from '@/types/app'
+import { getChatStorageKey } from '@/utils/auth'
 
 const storageConversationIdKey = 'conversationIdInfo'
+
+// 获取当前用户的conversation storage key
+function getUserConversationKey() {
+  const chatKey = getChatStorageKey()
+  if (!chatKey) { return storageConversationIdKey }
+  // 为每个用户创建独立的conversation key
+  return `${chatKey}_conversations`
+}
 
 type ConversationInfoType = Omit<ConversationItem, 'inputs' | 'id'>
 function useConversation() {
   const [conversationList, setConversationList] = useState<ConversationItem[]>([])
   const [currConversationId, doSetCurrConversationId, getCurrConversationId] = useGetState<string>('-1')
+
   // when set conversation id, we do not have set appId
   const setCurrConversationId = (id: string, appId: string, isSetToLocalStroge = true, newConversationName = '') => {
     doSetCurrConversationId(id)
     if (isSetToLocalStroge && id !== '-1') {
+      // 使用用户隔离的storage key
+      const userConversationKey = getUserConversationKey()
       // conversationIdInfo: {[appId1]: conversationId1, [appId2]: conversationId2}
-      const conversationIdInfo = globalThis.localStorage?.getItem(storageConversationIdKey) ? JSON.parse(globalThis.localStorage?.getItem(storageConversationIdKey) || '') : {}
+      const conversationIdInfo = globalThis.localStorage?.getItem(userConversationKey) ? JSON.parse(globalThis.localStorage?.getItem(userConversationKey) || '') : {}
       conversationIdInfo[appId] = id
-      globalThis.localStorage?.setItem(storageConversationIdKey, JSON.stringify(conversationIdInfo))
+      globalThis.localStorage?.setItem(userConversationKey, JSON.stringify(conversationIdInfo))
     }
   }
 
   const getConversationIdFromStorage = (appId: string) => {
-    const conversationIdInfo = globalThis.localStorage?.getItem(storageConversationIdKey) ? JSON.parse(globalThis.localStorage?.getItem(storageConversationIdKey) || '') : {}
+    // 使用用户隔离的storage key
+    const userConversationKey = getUserConversationKey()
+    const conversationIdInfo = globalThis.localStorage?.getItem(userConversationKey) ? JSON.parse(globalThis.localStorage?.getItem(userConversationKey) || '') : {}
     const id = conversationIdInfo[appId]
     return id
   }
