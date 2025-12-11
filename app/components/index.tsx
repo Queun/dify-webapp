@@ -53,7 +53,7 @@ const Main: FC<IMainProps> = () => {
   const [fileConfig, setFileConfig] = useState<FileUpload | undefined>()
 
   useEffect(() => {
-    if (APP_INFO?.title) { document.title = `${APP_INFO.title} - Powered by Dify` }
+    if (APP_INFO?.title) { document.title = APP_INFO.title }
   }, [APP_INFO?.title])
 
   // onData change thought (the produce obj). https://github.com/immerjs/immer/issues/576
@@ -700,7 +700,7 @@ const Main: FC<IMainProps> = () => {
 
           {
             hasSetInputs && (
-              <div className='relative grow pc:w-[794px] max-w-full mobile:w-full pb-[180px] mx-auto mb-3.5' ref={chatListDomRef}>
+              <div className='relative grow w-full max-w-[1400px] xl:max-w-[1200px] lg:max-w-[900px] pb-[180px] mx-auto mb-3.5 px-4 md:px-6 lg:px-8' ref={chatListDomRef}>
                 <Chat
                   chatList={chatList}
                   onSend={handleSend}

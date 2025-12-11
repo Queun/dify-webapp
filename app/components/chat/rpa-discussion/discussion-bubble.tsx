@@ -67,7 +67,7 @@ const DiscussionBubble: FC<DiscussionBubbleProps> = ({ speaker, content, order }
         </div>
 
         {/* 对话内容 */}
-        <div className={`px-4 py-3 rounded-lg border ${config.bgColor} ${config.borderColor}`}>
+        <div className={`px-4 py-3 rounded-lg border ${config.bgColor} ${config.borderColor} shadow-sm`}>
           <p className="text-sm text-gray-800 whitespace-pre-wrap break-words leading-relaxed">
             {content}
           </p>

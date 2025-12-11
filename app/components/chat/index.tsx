@@ -144,7 +144,7 @@ const Chat: FC<IChatProps> = ({
   return (
     <div className={cn(!feedbackDisabled && 'px-3.5', 'h-full')}>
       {/* Chat List */}
-      <div className="h-full space-y-[30px]">
+      <div className="h-full space-y-8">{/* 32px - Gemini风格 */}
         {chatList.map((item) => {
           if (item.isAnswer) {
             const isLast = item.id === chatList[chatList.length - 1].id
@@ -170,8 +170,8 @@ const Chat: FC<IChatProps> = ({
       </div>
       {
         !isHideSendInput && (
-          <div className='fixed z-10 bottom-0 left-1/2 transform -translate-x-1/2 pc:ml-[122px] tablet:ml-[96px] mobile:ml-0 pc:w-[794px] tablet:w-[794px] max-w-full mobile:w-full px-3.5'>
-            <div className='p-[5.5px] max-h-[150px] bg-white border-[1.5px] border-gray-200 rounded-xl overflow-y-auto'>
+          <div className='fixed z-10 bottom-0 left-1/2 transform -translate-x-1/2 pc:ml-[122px] tablet:ml-[96px] mobile:ml-0 w-full max-w-[1400px] xl:max-w-[1200px] lg:max-w-[900px] px-4 md:px-6 lg:px-8 mb-4'>
+            <div className='p-2 max-h-[150px] bg-white border border-gray-300 rounded-2xl overflow-y-auto shadow-md focus-within:border-gray-500 focus-within:ring-2 focus-within:ring-gray-200 transition-all'>
               {
                 visionConfig?.enabled && (
                   <>
@@ -208,9 +208,10 @@ const Chat: FC<IChatProps> = ({
               }
               <Textarea
                 className={`
-                  block w-full px-2 pr-[118px] py-[7px] leading-5 max-h-none text-base text-gray-700 outline-none appearance-none resize-none
+                  block w-full px-3 pr-[118px] py-2 leading-6 max-h-none text-[15px] text-gray-800 outline-none appearance-none resize-none
                   ${visionConfig?.enabled && 'pl-12'}
                 `}
+                placeholder="输入消息..."
                 value={query}
                 onChange={handleContentChange}
                 onKeyUp={handleKeyUp}
@@ -228,7 +229,7 @@ const Chat: FC<IChatProps> = ({
                     </div>
                   }
                 >
-                  <div className={`${s.sendBtn} w-8 h-8 cursor-pointer rounded-md`} onClick={handleSend}></div>
+                  <div className={`${s.sendBtn} w-8 h-8 cursor-pointer rounded-md transition-transform hover:scale-110 active:scale-95`} onClick={handleSend}></div>
                 </Tooltip>
               </div>
             </div>

@@ -39,8 +39,8 @@ module.exports = ({ theme }) => ({
 
       // Base
       'color': 'var(--tw-prose-body)',
-      'fontSize': theme('fontSize.sm')[0],
-      'lineHeight': theme('lineHeight.7'),
+      'fontSize': '15px',
+      'lineHeight': '1.8',
 
       // Layout
       '> *': {
@@ -56,8 +56,8 @@ module.exports = ({ theme }) => ({
 
       // Text
       'p': {
-        marginTop: theme('spacing.6'),
-        marginBottom: theme('spacing.6'),
+        marginTop: theme('spacing.4'),
+        marginBottom: theme('spacing.4'),
       },
       '[class~="lead"]': {
         fontSize: theme('fontSize.base')[0],
@@ -123,16 +123,16 @@ module.exports = ({ theme }) => ({
         marginBottom: theme('spacing.3'),
       },
       '> ul > li > *:first-child': {
-        marginTop: theme('spacing.5'),
+        marginTop: theme('spacing.3'),
       },
       '> ul > li > *:last-child': {
-        marginBottom: theme('spacing.5'),
+        marginBottom: theme('spacing.3'),
       },
       '> ol > li > *:first-child': {
-        marginTop: theme('spacing.5'),
+        marginTop: theme('spacing.3'),
       },
       '> ol > li > *:last-child': {
-        marginBottom: theme('spacing.5'),
+        marginBottom: theme('spacing.3'),
       },
       'ul ul, ul ol, ol ul, ol ol': {
         marginTop: theme('spacing.3'),
@@ -181,25 +181,26 @@ module.exports = ({ theme }) => ({
       'h1': {
         color: 'var(--tw-prose-headings)',
         fontWeight: '700',
-        fontSize: theme('fontSize.2xl')[0],
-        ...theme('fontSize.2xl')[1],
-        marginBottom: theme('spacing.2'),
+        fontSize: '1.875rem',
+        lineHeight: '1.25',
+        marginTop: theme('spacing.8'),
+        marginBottom: theme('spacing.4'),
       },
       'h2': {
         color: 'var(--tw-prose-headings)',
         fontWeight: '600',
-        fontSize: theme('fontSize.lg')[0],
-        ...theme('fontSize.lg')[1],
-        marginTop: theme('spacing.16'),
-        marginBottom: theme('spacing.2'),
+        fontSize: '1.5rem',
+        lineHeight: '1.3',
+        marginTop: theme('spacing.12'),
+        marginBottom: theme('spacing.3'),
       },
       'h3': {
         color: 'var(--tw-prose-headings)',
-        fontSize: theme('fontSize.base')[0],
-        ...theme('fontSize.base')[1],
+        fontSize: '1.25rem',
+        lineHeight: '1.35',
         fontWeight: '600',
-        marginTop: theme('spacing.10'),
-        marginBottom: theme('spacing.2'),
+        marginTop: theme('spacing.8'),
+        marginBottom: theme('spacing.3'),
       },
 
       // Media

@@ -57,28 +57,37 @@ const Header: FC<IHeaderProps> = ({
       <div className="flex items-center space-x-3">
         {/* User Info */}
         {currentUser && (
-          <div className="hidden sm:flex items-center space-x-2 text-xs text-gray-600">
+          <div className="hidden sm:flex items-center space-x-2 text-sm text-gray-700">
             <span className="font-medium">{currentUser.name}</span>
-            <span className="text-gray-400">|</span>
+            <span className="text-gray-400">•</span>
             <span>{currentUser.courseId}</span>
           </div>
         )}
 
-        {/* Mobile: New Chat Button */}
-        {isMobile && (
-          <div className='flex items-center justify-center h-8 w-8 cursor-pointer' onClick={() => onCreateNewChat?.()}>
-            <PencilSquareIcon className="h-4 w-4 text-gray-500" />
+        {/* Logout Button - Desktop */}
+        {currentUser && !isMobile && (
+          <div
+            className="flex items-center justify-center h-8 px-3 rounded-lg cursor-pointer text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+            onClick={handleLogout}
+          >
+            <ArrowRightOnRectangleIcon className="h-4 w-4 mr-1" />
+            <span>登出</span>
           </div>
         )}
 
-        {/* Logout Button */}
-        <div
-          className='flex items-center justify-center h-8 w-8 cursor-pointer hover:bg-gray-200 rounded transition-colors'
-          onClick={handleLogout}
-          title="退出登录"
-        >
-          <ArrowRightOnRectangleIcon className="h-4 w-4 text-gray-500" />
-        </div>
+        {/* Mobile: Action Buttons */}
+        {isMobile && (
+          <>
+            <div className='flex items-center justify-center h-8 w-8 cursor-pointer' onClick={() => onCreateNewChat?.()}>
+              <PencilSquareIcon className="h-4 w-4 text-gray-500" />
+            </div>
+            {currentUser && (
+              <div className='flex items-center justify-center h-8 w-8 cursor-pointer' onClick={handleLogout}>
+                <ArrowRightOnRectangleIcon className="h-4 w-4 text-gray-500" />
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   )

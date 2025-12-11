@@ -7,6 +7,18 @@ module.exports = {
   theme: {
     typography: require('./typography'),
     extend: {
+      fontFamily: {
+        sans: [
+          '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto',
+          '"Helvetica Neue"', 'Arial', '"Noto Sans"', '"Microsoft YaHei"',
+          '"PingFang SC"', 'sans-serif', '"Apple Color Emoji"',
+          '"Segoe UI Emoji"', '"Segoe UI Symbol"', '"Noto Color Emoji"'
+        ],
+        mono: [
+          'ui-monospace', 'SFMono-Regular', '"SF Mono"', 'Menlo', 'Monaco',
+          'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace'
+        ],
+      },
       colors: {
         gray: {
           50: '#F9FAFB',

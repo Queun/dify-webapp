@@ -9,7 +9,6 @@ import { useTranslation } from 'react-i18next'
 import Button from '@/app/components/base/button'
 import StreamdownMarkdown from '@/app/components/base/streamdown-markdown'
 import Tooltip from '@/app/components/base/tooltip'
-import WorkflowProcess from '@/app/components/workflow/workflow-process'
 import { randomString } from '@/utils/string'
 import { parseMessageContent } from '@/utils/message-parser'
 import ImageGallery from '../../base/image-gallery'
@@ -21,8 +20,7 @@ import RpaDiscussion from '../rpa-discussion'
 function OperationBtn({ innerContent, onClick, className }: { innerContent: React.ReactNode, onClick?: () => void, className?: string }) {
   return (
     <div
-      className={`relative box-border flex items-center justify-center h-7 w-7 p-0.5 rounded-lg bg-white cursor-pointer text-gray-500 hover:text-gray-800 ${className ?? ''}`}
-      style={{ boxShadow: '0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -2px rgba(0, 0, 0, 0.05)' }}
+      className={`relative box-border flex items-center justify-center h-7 w-7 p-0.5 rounded-lg bg-white cursor-pointer text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors ${className ?? ''}`}
       onClick={onClick && onClick}
     >
       {innerContent}
@@ -98,8 +96,7 @@ const Answer: FC<IAnswerProps> = ({
         content={isLike ? '取消赞同' : '取消反对'}
       >
         <div
-          className="relative box-border flex items-center justify-center h-7 w-7 p-0.5 rounded-lg bg-white cursor-pointer text-gray-500 hover:text-gray-800"
-          style={{ boxShadow: '0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -2px rgba(0, 0, 0, 0.05)' }}
+          className="relative box-border flex items-center justify-center h-7 w-7 p-0.5 rounded-lg bg-white cursor-pointer text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"
           onClick={async () => {
             await onFeedback?.(id, { rating: null })
           }}
@@ -180,12 +177,13 @@ const Answer: FC<IAnswerProps> = ({
               </div>
             )}
         </div>
-        <div className={`${s.answerWrap} max-w-[calc(100%-3rem)]`}>
+        <div className={`${s.answerWrap} flex-1 max-w-full`}>
           <div className={`${s.answer} relative text-sm text-gray-900`}>
-            <div className={`ml-2 py-3 px-4 bg-gray-100 rounded-tr-2xl rounded-b-2xl ${workflowProcess && 'min-w-[480px]'}`}>
-              {workflowProcess && (
+            <div className={`ml-2 py-4 px-5 bg-white border border-gray-200 rounded-2xl ${workflowProcess && 'min-w-[480px]'}`}>
+              {/* WorkflowProcess 组件已隐藏，但保留用于调试 */}
+              {/* {workflowProcess && (
                 <WorkflowProcess data={workflowProcess} hideInfo />
-              )}
+              )} */}
               {(isResponding && (isAgentMode ? (!content && (agent_thoughts || []).filter(item => !!item.thought || !!item.tool).length === 0) : !content))
                 ? (
                   <div className="flex items-center justify-center w-6 h-5">
