@@ -54,7 +54,7 @@ const Main: FC<IMainProps> = () => {
 
   useEffect(() => {
     if (APP_INFO?.title) { document.title = APP_INFO.title }
-  }, [APP_INFO?.title])
+  }, [])
 
   // onData change thought (the produce obj). https://github.com/immerjs/immer/issues/576
   useEffect(() => {
@@ -161,6 +161,7 @@ const Main: FC<IMainProps> = () => {
 
     if (isNewConversation && isChatStarted) { setChatList(generateNewChatListWithOpenStatement()) }
   }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(handleConversationSwitch, [currConversationId, inited])
 
   const handleConversationIdChange = (id: string) => {
@@ -229,6 +230,7 @@ const Main: FC<IMainProps> = () => {
   }
 
   // init
+
   useEffect(() => {
     if (!hasSetAppConfig) {
       setAppUnavailable(true)

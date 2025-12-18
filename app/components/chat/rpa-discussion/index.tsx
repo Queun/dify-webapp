@@ -41,7 +41,7 @@ const RpaDiscussion: FC<RpaDiscussionProps> = ({ discussionScript, className = '
       </div>
 
       {/* 对话气泡列表 */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         {discussionScript.map((item, index) => {
           // 兼容两种格式：优先使用 role/dialogue，回退到 speaker/content
           const speaker = item.role || item.speaker || '未知'
