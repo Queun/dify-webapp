@@ -13,6 +13,7 @@ export async function saveChatMessage(data: {
     const response = await fetch('/api/chat-history', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin', // 重要：携带cookie用于身份验证
       body: JSON.stringify(data),
     })
     const result = await response.json()
@@ -30,7 +31,9 @@ export async function getChatHistory(conversationId?: string) {
       ? `/api/chat-history?conversation_id=${conversationId}`
       : '/api/chat-history'
 
-    const response = await fetch(url)
+    const response = await fetch(url, {
+      credentials: 'same-origin', // 重要：携带cookie用于身份验证
+    })
     const result = await response.json()
     return result
   }
