@@ -2,8 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'dify-webapp',
-      script: 'node_modules/next/dist/bin/next',
-      args: 'start',
+      script: '.next/standalone/server.js',
       cwd: '/opt/dify-webapp',
       instances: 1,
       exec_mode: 'fork',
@@ -12,6 +11,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3000,
+        HOSTNAME: '0.0.0.0', // 绑定到所有网络接口，允许外网访问
       },
       error_file: '/opt/dify-webapp/logs/error.log',
       out_file: '/opt/dify-webapp/logs/out.log',
