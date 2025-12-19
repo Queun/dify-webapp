@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import type { Course } from '@/types/auth'
-import { getCourseList } from '@/utils/auth'
+import { getCourseList } from '@/service/admin'
 import Toast from '@/app/components/base/toast'
 import { DocumentArrowDownIcon } from '@heroicons/react/24/outline'
 
