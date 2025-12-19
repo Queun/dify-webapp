@@ -8,6 +8,8 @@
  */
 
 import type {
+  AdminLoginFormData,
+  AdminSession,
   Course,
   CurrentUser,
   LoginFormData,
@@ -205,4 +207,594 @@ export function validateAdminPassword(password: string): boolean {
   if (!isBrowser()) { return false }
   const storedPassword = localStorage.getItem(STORAGE_KEYS.ADMIN_PASSWORD)
   return password === storedPassword
+}
+
+/**
+ * 管理员登录
+ */
+export function adminLogin(formData: AdminLoginFormData): LoginValidationResult {
+  if (!isBrowser()) {
+    return {
+      success: false,
+      message: '浏览器环境不可用',
+    }
+  }
+
+  const { password } = formData
+
+  if (!password) {
+    return {
+      success: false,
+      message: '请输入管理员密码',
+    }
+  }
+
+  if (!validateAdminPassword(password)) {
+    return {
+      success: false,
+      message: '密码错误',
+    }
+  }
+
+  // 保存管理员会话
+  const adminSession: AdminSession = {
+    isAdmin: true,
+    loginAt: new Date().toISOString(),
+  }
+
+  localStorage.setItem(STORAGE_KEYS.ADMIN_SESSION, JSON.stringify(adminSession))
+
+  return {
+    success: true,
+  }
+}
+
+/**
+ * 获取管理员会话
+ */
+export function getAdminSession(): AdminSession | null {
+  if (!isBrowser()) { return null }
+  const data = localStorage.getItem(STORAGE_KEYS.ADMIN_SESSION)
+  return data ? JSON.parse(data) : null
+}
+
+/**
+ * 检查是否为管理员登录状态
+ */
+export function isAdminLoggedIn(): boolean {
+  if (!isBrowser()) { return false }
+  const adminSession = getAdminSession()
+  return adminSession?.isAdmin === true
+}
+
+/**
+ * 管理员登出
+ */
+export function adminLogout(): void {
+  if (!isBrowser()) { return }
+  localStorage.removeItem(STORAGE_KEYS.ADMIN_SESSION)
+}
+
+// ===== 用户管理函数 =====
+
+/**
+ * 添加用户
+ */
+export function addUser(user: Omit<User, 'createdAt'>): LoginValidationResult {
+  if (!isBrowser()) {
+    return { success: false, message: '浏览器环境不可用' }
+  }
+
+  const { name, studentId } = user
+
+  if (!name || !studentId) {
+    return { success: false, message: '姓名和学号不能为空' }
+  }
+
+  const userList = getUserList()
+
+  // 检查学号是否已存在
+  if (userList.find(u => u.studentId === studentId)) {
+    return { success: false, message: '该学号已存在' }
+  }
+
+  // 检查姓名+学号组合是否已存在
+  if (userList.find(u => u.name === name && u.studentId === studentId)) {
+    return { success: false, message: '该用户已存在' }
+  }
+
+  const newUser: User = {
+    ...user,
+    createdAt: new Date().toISOString(),
+  }
+
+  const updatedUserList = [...userList, newUser]
+  localStorage.setItem(STORAGE_KEYS.USER_LIST, JSON.stringify(updatedUserList))
+
+  return { success: true }
+}
+
+/**
+ * 删除用户
+ */
+export function deleteUser(studentId: string): LoginValidationResult {
+  if (!isBrowser()) {
+    return { success: false, message: '浏览器环境不可用' }
+  }
+
+  const userList = getUserList()
+  const userIndex = userList.findIndex(u => u.studentId === studentId)
+
+  if (userIndex === -1) {
+    return { success: false, message: '用户不存在' }
+  }
+
+  const updatedUserList = userList.filter(u => u.studentId !== studentId)
+  localStorage.setItem(STORAGE_KEYS.USER_LIST, JSON.stringify(updatedUserList))
+
+  return { success: true }
+}
+
+/**
+ * 更新用户
+ */
+export function updateUser(studentId: string, updatedUser: Omit<User, 'createdAt'>): LoginValidationResult {
+  if (!isBrowser()) {
+    return { success: false, message: '浏览器环境不可用' }
+  }
+
+  const { name } = updatedUser
+
+  if (!name) {
+    return { success: false, message: '姓名不能为空' }
+  }
+
+  const userList = getUserList()
+  const userIndex = userList.findIndex(u => u.studentId === studentId)
+
+  if (userIndex === -1) {
+    return { success: false, message: '用户不存在' }
+  }
+
+  // 如果学号改变，检查新学号是否已存在
+  if (updatedUser.studentId !== studentId) {
+    if (userList.find(u => u.studentId === updatedUser.studentId)) {
+      return { success: false, message: '新学号已存在' }
+    }
+  }
+
+  const existingUser = userList[userIndex]
+  const newUser: User = {
+    ...updatedUser,
+    createdAt: existingUser.createdAt, // 保留原始创建时间
+  }
+
+  const updatedUserList = [...userList]
+  updatedUserList[userIndex] = newUser
+
+  localStorage.setItem(STORAGE_KEYS.USER_LIST, JSON.stringify(updatedUserList))
+
+  return { success: true }
+}
+
+/**
+ * 批量导入用户（CSV格式）
+ */
+export function importUsersFromCSV(csvContent: string): LoginValidationResult {
+  if (!isBrowser()) {
+    return { success: false, message: '浏览器环境不可用' }
+  }
+
+  try {
+    const lines = csvContent.trim().split('\n')
+
+    if (lines.length < 2) {
+      return { success: false, message: 'CSV文件格式错误，至少需要标题行和数据行' }
+    }
+
+    const header = lines[0].split(',').map(h => h.trim())
+    const expectedHeaders = ['姓名', '学号']
+
+    // 检查CSV格式
+    if (header[0] !== expectedHeaders[0] || header[1] !== expectedHeaders[1]) {
+      return { success: false, message: `CSV格式错误，请确保第一行为：${expectedHeaders.join(',')}` }
+    }
+
+    const userList = getUserList()
+    const newUsers: User[] = []
+    const errors: string[] = []
+
+    // 处理每一行数据
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim()
+      if (!line) { continue }
+
+      const parts = line.split(',').map(p => p.trim())
+      if (parts.length < 2) {
+        errors.push(`第${i + 1}行格式错误`)
+        continue
+      }
+
+      const [name, studentId] = parts
+      if (!name || !studentId) {
+        errors.push(`第${i + 1}行数据不完整`)
+        continue
+      }
+
+      // 检查是否已存在
+      if (userList.find(u => u.studentId === studentId) || newUsers.find(u => u.studentId === studentId)) {
+        errors.push(`第${i + 1}行学号 ${studentId} 已存在`)
+        continue
+      }
+
+      newUsers.push({
+        name,
+        studentId,
+        createdAt: new Date().toISOString(),
+      })
+    }
+
+    if (errors.length > 0) {
+      return {
+        success: false,
+        message: `导入失败：\n${errors.join('\n')}`,
+      }
+    }
+
+    if (newUsers.length === 0) {
+      return { success: false, message: '没有有效的用户数据' }
+    }
+
+    // 保存新用户
+    const updatedUserList = [...userList, ...newUsers]
+    localStorage.setItem(STORAGE_KEYS.USER_LIST, JSON.stringify(updatedUserList))
+
+    return {
+      success: true,
+      message: `成功导入 ${newUsers.length} 个用户`,
+    }
+  } catch (error) {
+    return {
+      success: false,
+      message: 'CSV文件解析失败，请检查文件格式',
+    }
+  }
+}
+
+// ===== 课程管理函数 =====
+
+/**
+ * 添加课程
+ */
+export function addCourse(course: Omit<Course, 'createdAt'>): LoginValidationResult {
+  if (!isBrowser()) {
+    return { success: false, message: '浏览器环境不可用' }
+  }
+
+  const { courseId, courseName } = course
+
+  if (!courseId) {
+    return { success: false, message: '课程号不能为空' }
+  }
+
+  const courseList = getCourseList()
+
+  // 检查课程号是否已存在
+  if (courseList.find(c => c.courseId === courseId)) {
+    return { success: false, message: '该课程号已存在' }
+  }
+
+  const newCourse: Course = {
+    ...course,
+    courseName: courseName || courseId, // 如果没有提供课程名称，使用课程号
+    createdAt: new Date().toISOString(),
+  }
+
+  const updatedCourseList = [...courseList, newCourse]
+  localStorage.setItem(STORAGE_KEYS.COURSE_LIST, JSON.stringify(updatedCourseList))
+
+  return { success: true }
+}
+
+/**
+ * 删除课程
+ */
+export function deleteCourse(courseId: string): LoginValidationResult {
+  if (!isBrowser()) {
+    return { success: false, message: '浏览器环境不可用' }
+  }
+
+  const courseList = getCourseList()
+  const courseIndex = courseList.findIndex(c => c.courseId === courseId)
+
+  if (courseIndex === -1) {
+    return { success: false, message: '课程不存在' }
+  }
+
+  const updatedCourseList = courseList.filter(c => c.courseId !== courseId)
+  localStorage.setItem(STORAGE_KEYS.COURSE_LIST, JSON.stringify(updatedCourseList))
+
+  return { success: true }
+}
+
+/**
+ * 更新课程
+ */
+export function updateCourse(courseId: string, updatedCourse: Omit<Course, 'createdAt'>): LoginValidationResult {
+  if (!isBrowser()) {
+    return { success: false, message: '浏览器环境不可用' }
+  }
+
+  const { courseName } = updatedCourse
+
+  const courseList = getCourseList()
+  const courseIndex = courseList.findIndex(c => c.courseId === courseId)
+
+  if (courseIndex === -1) {
+    return { success: false, message: '课程不存在' }
+  }
+
+  // 如果课程号改变，检查新课程号是否已存在
+  if (updatedCourse.courseId !== courseId) {
+    if (courseList.find(c => c.courseId === updatedCourse.courseId)) {
+      return { success: false, message: '新课程号已存在' }
+    }
+  }
+
+  const existingCourse = courseList[courseIndex]
+  const newCourse: Course = {
+    ...updatedCourse,
+    courseName: courseName || updatedCourse.courseId, // 如果没有提供课程名称，使用课程号
+    createdAt: existingCourse.createdAt, // 保留原始创建时间
+  }
+
+  const updatedCourseList = [...courseList]
+  updatedCourseList[courseIndex] = newCourse
+
+  localStorage.setItem(STORAGE_KEYS.COURSE_LIST, JSON.stringify(updatedCourseList))
+
+  return { success: true }
+}
+
+/**
+ * 批量导入课程（CSV格式）
+ */
+export function importCoursesFromCSV(csvContent: string): LoginValidationResult {
+  if (!isBrowser()) {
+    return { success: false, message: '浏览器环境不可用' }
+  }
+
+  try {
+    const lines = csvContent.trim().split('\n')
+
+    if (lines.length < 2) {
+      return { success: false, message: 'CSV文件格式错误，至少需要标题行和数据行' }
+    }
+
+    const header = lines[0].split(',').map(h => h.trim())
+    const expectedHeaders = ['课程号', '课程名称']
+
+    // 检查CSV格式
+    if (header[0] !== expectedHeaders[0]) {
+      return { success: false, message: `CSV格式错误，请确保第一行包含：${expectedHeaders.join(',')}` }
+    }
+
+    const courseList = getCourseList()
+    const newCourses: Course[] = []
+    const errors: string[] = []
+
+    // 处理每一行数据
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim()
+      if (!line) { continue }
+
+      const parts = line.split(',').map(p => p.trim())
+      if (parts.length < 1) {
+        errors.push(`第${i + 1}行格式错误`)
+        continue
+      }
+
+      const [courseId, courseName] = parts
+      if (!courseId) {
+        errors.push(`第${i + 1}行课程号不能为空`)
+        continue
+      }
+
+      // 检查是否已存在
+      if (courseList.find(c => c.courseId === courseId) || newCourses.find(c => c.courseId === courseId)) {
+        errors.push(`第${i + 1}行课程号 ${courseId} 已存在`)
+        continue
+      }
+
+      newCourses.push({
+        courseId,
+        courseName: courseName || courseId,
+        createdAt: new Date().toISOString(),
+      })
+    }
+
+    if (errors.length > 0) {
+      return {
+        success: false,
+        message: `导入失败：\n${errors.join('\n')}`,
+      }
+    }
+
+    if (newCourses.length === 0) {
+      return { success: false, message: '没有有效的课程数据' }
+    }
+
+    // 保存新课程
+    const updatedCourseList = [...courseList, ...newCourses]
+    localStorage.setItem(STORAGE_KEYS.COURSE_LIST, JSON.stringify(updatedCourseList))
+
+    return {
+      success: true,
+      message: `成功导入 ${newCourses.length} 个课程`,
+    }
+  } catch (error) {
+    return {
+      success: false,
+      message: 'CSV文件解析失败，请检查文件格式',
+    }
+  }
+}
+
+// ===== 数据导出函数 =====
+
+/**
+ * 获取所有聊天记录
+ */
+export function getAllChatHistory(): Array<{
+  studentId: string
+  studentName: string
+  courseId: string
+  chatHistory: any[]
+}> {
+  if (!isBrowser()) { return [] }
+
+  const userList = getUserList()
+  const courseList = getCourseList()
+  const allChatHistory: Array<{
+    studentId: string
+    studentName: string
+    courseId: string
+    chatHistory: any[]
+  }> = []
+
+  // 遍历localStorage查找所有聊天记录
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key && key.startsWith(STORAGE_KEYS.CHAT_HISTORY_PREFIX)) {
+      // 解析键名获取学生ID和课程ID
+      const keyParts = key.replace(STORAGE_KEYS.CHAT_HISTORY_PREFIX, '').split('_')
+      if (keyParts.length >= 2) {
+        const studentId = keyParts[0]
+        const courseId = keyParts.slice(1).join('_') // 处理课程ID可能包含下划线的情况
+
+        // 查找学生信息
+        const user = userList.find(u => u.studentId === studentId)
+        const course = courseList.find(c => c.courseId === courseId)
+
+        if (user && course) {
+          const chatData = localStorage.getItem(key)
+          let chatHistory = []
+          try {
+            chatHistory = chatData ? JSON.parse(chatData) : []
+          } catch (error) {
+            console.warn(`Failed to parse chat history for ${key}:`, error)
+            chatHistory = []
+          }
+
+          allChatHistory.push({
+            studentId,
+            studentName: user.name,
+            courseId,
+            chatHistory,
+          })
+        }
+      }
+    }
+  }
+
+  return allChatHistory
+}
+
+/**
+ * 导出聊天记录为CSV格式
+ */
+export function exportChatHistoryToCSV(): string {
+  const allChatHistory = getAllChatHistory()
+  const csvRows: string[] = []
+
+  // CSV表头
+  csvRows.push('学号,姓名,课程号,对话ID,时间,类型,内容')
+
+  // 遍历所有聊天记录
+  allChatHistory.forEach(({ studentId, studentName, courseId, chatHistory }) => {
+    if (Array.isArray(chatHistory) && chatHistory.length > 0) {
+      chatHistory.forEach((chat) => {
+        if (chat && chat.id) {
+          const timestamp = chat.createdAt || chat.updated_at || new Date().toISOString()
+          const time = new Date(timestamp).toLocaleString('zh-CN')
+
+          // 用户问题
+          if (chat.content) {
+            const content = JSON.stringify(chat.content).replace(/"/g, '""') // 转义引号
+            csvRows.push(`"${studentId}","${studentName}","${courseId}","${chat.id}","${time}","问题","${content}"`)
+          }
+
+          // 助手回答
+          if (chat.agent_thoughts && Array.isArray(chat.agent_thoughts)) {
+            chat.agent_thoughts.forEach((thought: any, index: number) => {
+              if (thought && typeof thought === 'object') {
+                const thoughtContent = JSON.stringify(thought).replace(/"/g, '""')
+                csvRows.push(`"${studentId}","${studentName}","${courseId}","${chat.id}_thought_${index}","${time}","助手思考","${thoughtContent}"`)
+              }
+            })
+          }
+
+          // 助手最终回答
+          if (chat.answer) {
+            const answer = JSON.stringify(chat.answer).replace(/"/g, '""')
+            csvRows.push(`"${studentId}","${studentName}","${courseId}","${chat.id}_answer","${time}","回答","${answer}"`)
+          }
+        }
+      })
+    }
+  })
+
+  return csvRows.join('\n')
+}
+
+/**
+ * 获取聊天记录统计信息
+ */
+export function getChatStatistics(): {
+  totalConversations: number
+  totalUsers: number
+  userStats: Array<{
+    studentId: string
+    studentName: string
+    courseId: string
+    conversationCount: number
+    lastActivity?: string
+  }>
+} {
+  const allChatHistory = getAllChatHistory()
+  const userStats = allChatHistory.map(({ studentId, studentName, courseId, chatHistory }) => {
+    const conversationCount = Array.isArray(chatHistory) ? chatHistory.length : 0
+    let lastActivity: string | undefined
+
+    if (conversationCount > 0 && Array.isArray(chatHistory)) {
+      // 找到最新的对话时间
+      const lastChat = chatHistory.reduce((latest, current) => {
+        const currentTime = current?.createdAt || current?.updated_at
+        const latestTime = latest?.createdAt || latest?.updated_at
+        if (currentTime && (!latestTime || new Date(currentTime) > new Date(latestTime))) {
+          return current
+        }
+        return latest
+      }, chatHistory[0])
+
+      if (lastChat) {
+        lastActivity = lastChat.createdAt || lastChat.updated_at
+      }
+    }
+
+    return {
+      studentId,
+      studentName,
+      courseId,
+      conversationCount,
+      lastActivity,
+    }
+  })
+
+  return {
+    totalConversations: allChatHistory.reduce((total, { chatHistory }) =>
+      total + (Array.isArray(chatHistory) ? chatHistory.length : 0), 0),
+    totalUsers: allChatHistory.length,
+    userStats,
+  }
 }
