@@ -3,7 +3,7 @@ import type { FC } from 'react'
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { LoginFormData } from '@/types/auth'
-import { initializeSystemData, login } from '@/utils/auth'
+import { userLogin } from '@/service/auth'
 import Toast from '@/app/components/base/toast'
 
 export interface LoginFormProps {
@@ -19,11 +19,6 @@ const LoginForm: FC<LoginFormProps> = ({ className = '' }) => {
   })
   const [isLoading, setIsLoading] = useState(false)
 
-  // 初始化系统数据
-  React.useEffect(() => {
-    initializeSystemData()
-  }, [])
-
   const handleInputChange = (field: keyof LoginFormData, value: string) => {
     setFormData(prev => ({
       ...prev,
@@ -38,7 +33,7 @@ const LoginForm: FC<LoginFormProps> = ({ className = '' }) => {
 
     try {
       console.log('[Login] Calling login function...')
-      const result = login(formData)
+      const result = await userLogin(formData)
       console.log('[Login] Login result:', result)
 
       if (result.success) {

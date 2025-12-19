@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { isAdminLoggedIn, adminLogout, getUserList, getCourseList } from '@/utils/auth'
+import { verifyAdmin, adminLogout, getUserList, getCourseList } from '@/service/admin'
 import Toast from '@/app/components/base/toast'
 import UserManagement from '@/app/components/admin/user-management'
 import CourseManagement from '@/app/components/admin/course-management'
@@ -17,11 +17,11 @@ export default function AdminPage() {
   // 检查管理员登录状态
   useEffect(() => {
     const checkAdmin = async () => {
-      const adminStatus = await isAdminLoggedIn()
-      setIsAdmin(adminStatus)
+      const { isAdmin } = await verifyAdmin()
+      setIsAdmin(isAdmin)
       setIsChecking(false)
 
-      if (!adminStatus) {
+      if (!isAdmin) {
         router.push('/admin/login')
       }
     }
@@ -29,9 +29,11 @@ export default function AdminPage() {
   }, [router])
 
   const handleLogout = async () => {
-    await adminLogout()
-    Toast.notify({ type: 'success', message: '管理员已退出登录' })
-    router.push('/admin/login')
+    const result = await adminLogout()
+    if (result.success) {
+      Toast.notify({ type: 'success', message: '管理员已退出登录' })
+      router.push('/admin/login')
+    }
   }
 
   const handleBackToApp = () => {

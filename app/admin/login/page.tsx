@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import type { AdminLoginFormData } from '@/types/auth'
-import { adminLogin, isAdminLoggedIn } from '@/utils/auth'
+import { adminLogin, verifyAdmin } from '@/service/admin'
 import Toast from '@/app/components/base/toast'
 
 export default function AdminLoginPage() {
@@ -15,8 +15,8 @@ export default function AdminLoginPage() {
 
   // 如果已经是管理员登录状态，重定向到管理页面
   useEffect(() => {
-    const checkAdmin = () => {
-      const isAdmin = isAdminLoggedIn()
+    const checkAdmin = async () => {
+      const { isAdmin } = await verifyAdmin()
       if (isAdmin) {
         router.push('/admin')
       }
@@ -38,7 +38,7 @@ export default function AdminLoginPage() {
     setIsLoading(true)
 
     try {
-      const result = await adminLogin(formData)
+      const result = await adminLogin(formData.password)
       if (result.success) {
         Toast.notify({ type: 'success', message: '管理员登录成功！' })
         setTimeout(() => {

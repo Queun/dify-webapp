@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import type { User } from '@/types/auth'
-import { getUserList, addUser, deleteUser, importUsersFromCSV } from '@/utils/auth'
+import { getUserList, addUser, deleteUser, batchDeleteUsers, importUsers } from '@/service/admin'
 import Toast from '@/app/components/base/toast'
 import { PlusIcon, TrashIcon, DocumentArrowUpIcon } from '@heroicons/react/24/outline'
 
@@ -84,13 +84,7 @@ export default function UserManagement() {
     setIsLoading(true)
     try {
       const studentIds = Array.from(selectedUsers)
-      const response = await fetch('/api/users/batch-delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentIds }),
-      })
-
-      const result = await response.json()
+      const result = await batchDeleteUsers(studentIds)
       if (result.success) {
         Toast.notify({ type: 'success', message: `成功删除 ${result.deleted} 个用户` })
         setSelectedUsers(new Set())
@@ -136,7 +130,7 @@ export default function UserManagement() {
 
     setIsLoading(true)
     try {
-      const result = await importUsersFromCSV(csvContent)
+      const result = await importUsers(csvContent)
       if (result.success) {
         Toast.notify({ type: 'success', message: result.message || '导入成功' })
         setCsvContent('')

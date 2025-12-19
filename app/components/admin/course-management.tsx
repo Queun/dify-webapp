@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import type { Course } from '@/types/auth'
-import { getCourseList, addCourse, deleteCourse, importCoursesFromCSV } from '@/utils/auth'
+import { getCourseList, addCourse, deleteCourse, importCourses } from '@/service/admin'
 import Toast from '@/app/components/base/toast'
 import { PlusIcon, TrashIcon, DocumentArrowUpIcon } from '@heroicons/react/24/outline'
 
@@ -136,7 +136,7 @@ export default function CourseManagement() {
 
     setIsLoading(true)
     try {
-      const result = await importCoursesFromCSV(csvContent)
+      const result = await importCourses(csvContent)
       if (result.success) {
         Toast.notify({ type: 'success', message: result.message || '导入成功' })
         setCsvContent('')

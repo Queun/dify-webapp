@@ -2,88 +2,75 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { userOperations, courseOperations, sessionOperations } from '@/lib/db'
 import { createUserSessionToken } from '@/lib/auth'
+import { setUserSessionCookie } from '@/lib/middleware'
 
+/**
+ * POST /api/auth/login
+ * 用户登录
+ *
+ * Body: { name: string, studentId: string, courseId: string }
+ * 返回: { success: boolean, message?: string, user?: { name, studentId, courseId } }
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { name, studentId, courseId } = body
 
-    // Validate input
+    // 验证必填字段
     if (!name || !studentId || !courseId) {
-      return NextResponse.json(
-        { success: false, message: '请填写完整的登录信息' },
-        { status: 400 },
-      )
+      return NextResponse.json({
+        success: false,
+        message: '请填写所有必填字段',
+      }, { status: 400 })
     }
 
-    // Trim inputs
-    const trimmedName = name.trim()
-    const trimmedStudentId = studentId.trim()
-    const trimmedCourseId = courseId.trim()
-
-    // Validate user credentials
-    const user = userOperations.findByCredentials.get(trimmedStudentId, trimmedName) as any
-
+    // 验证用户是否存在（学号+姓名匹配）
+    const user = userOperations.findByCredentials.get(studentId, name) as any
     if (!user) {
-      return NextResponse.json(
-        { success: false, message: '学号或姓名错误' },
-        { status: 401 },
-      )
+      return NextResponse.json({
+        success: false,
+        message: '学号和姓名不匹配，请检查后重试',
+      }, { status: 401 })
     }
 
-    // Validate course exists
-    const course = courseOperations.getByCourseId.get(trimmedCourseId) as any
-
+    // 验证课程是否存在
+    const course = courseOperations.getByCourseId.get(courseId) as any
     if (!course) {
-      return NextResponse.json(
-        { success: false, message: '课程号不存在' },
-        { status: 401 },
-      )
+      return NextResponse.json({
+        success: false,
+        message: '课程号不存在，请联系管理员',
+      }, { status: 401 })
     }
 
-    // Generate session token
-    const { token, expiresAt } = await createUserSessionToken(
-      trimmedStudentId,
-      trimmedCourseId,
-      trimmedName,
-    )
+    // 生成JWT token
+    const { token, expiresAt } = await createUserSessionToken(studentId, courseId, name)
 
-    // Store session in database
+    // 保存session到数据库
     sessionOperations.createUserSession.run(
       token,
-      trimmedStudentId,
-      trimmedCourseId,
-      trimmedName,
+      studentId,
+      courseId,
+      name,
       expiresAt,
     )
 
-    // Create response with session cookie
-    const response = NextResponse.json({
+    // 设置cookie
+    await setUserSessionCookie(token, expiresAt)
+
+    return NextResponse.json({
       success: true,
-      message: '登录成功',
       user: {
-        name: trimmedName,
-        studentId: trimmedStudentId,
-        courseId: trimmedCourseId,
+        name,
+        studentId,
+        courseId,
       },
     })
-
-    // Set HTTP-only cookie with session token
-    response.cookies.set('user_session', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
-      path: '/',
-    })
-
-    return response
   }
-  catch (error) {
-    console.error('Login error:', error)
-    return NextResponse.json(
-      { success: false, message: '登录失败，请稍后重试' },
-      { status: 500 },
-    )
+  catch (error: any) {
+    console.error('[API /auth/login] Error:', error)
+    return NextResponse.json({
+      success: false,
+      message: '登录过程中出现错误',
+    }, { status: 500 })
   }
 }
