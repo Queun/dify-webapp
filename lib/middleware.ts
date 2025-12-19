@@ -107,7 +107,7 @@ export async function setUserSessionCookie(token: string, expiresAt: string) {
 
   cookieStore.set('user_session_token', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // 禁用secure flag以支持HTTP环境
     sameSite: 'lax',
     maxAge,
     path: '/',
@@ -127,7 +127,7 @@ export async function setAdminSessionCookie(token: string, expiresAt: string) {
 
   cookieStore.set('admin_session_token', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // 禁用secure flag以支持HTTP环境
     sameSite: 'lax',
     maxAge,
     path: '/',
