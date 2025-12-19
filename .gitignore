@@ -51,3 +51,7 @@ yarn.lock
 .serena
 # pmpm
 pnpm-lock.yaml
+
+# SQLite database files
+*.db-shm
+*.db-wal
