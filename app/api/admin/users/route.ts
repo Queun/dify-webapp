@@ -19,7 +19,15 @@ export async function GET(request: NextRequest) {
     }
 
     // 获取所有用户
-    const users = userOperations.getAll.all()
+    const rawUsers = userOperations.getAll.all() as any[]
+
+    // 转换字段名为camelCase
+    const users = rawUsers.map(user => ({
+      studentId: user.student_id,
+      name: user.name,
+      createdAt: user.created_at,
+      updatedAt: user.updated_at,
+    }))
 
     return NextResponse.json({
       success: true,

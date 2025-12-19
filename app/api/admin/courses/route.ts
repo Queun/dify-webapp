@@ -19,7 +19,15 @@ export async function GET(request: NextRequest) {
     }
 
     // 获取所有课程
-    const courses = courseOperations.getAll.all()
+    const rawCourses = courseOperations.getAll.all() as any[]
+
+    // 转换字段名为camelCase
+    const courses = rawCourses.map(course => ({
+      courseId: course.course_id,
+      courseName: course.course_name,
+      createdAt: course.created_at,
+      updatedAt: course.updated_at,
+    }))
 
     return NextResponse.json({
       success: true,
