@@ -188,6 +188,13 @@ export const chatOperations = {
     ORDER BY created_at DESC
   `),
 
+  // Get chat history for specific conversation
+  getByConversation: db.prepare(`
+    SELECT * FROM chat_history
+    WHERE student_id = ? AND course_id = ? AND conversation_id = ?
+    ORDER BY created_at ASC
+  `),
+
   // Get all chat history (for admin export)
   getAll: db.prepare(`
     SELECT ch.*, u.name as user_name
