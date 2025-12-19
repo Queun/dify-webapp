@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
 /**
  * GET /api/chat-history
  * 获取当前用户的聊天记录
+ * 支持按conversation_id筛选: GET /api/chat-history?conversation_id=xxx
  */
 export async function GET(request: NextRequest) {
   try {
@@ -80,16 +81,33 @@ export async function GET(request: NextRequest) {
 
     if (!currentUser) {
       return NextResponse.json(
-        { success: false, message: '未登录', data: [] },
+        { success: false, message: '未登录', messages: [] },
         { status: 401 },
       )
     }
 
+    // 获取查询参数
+    const { searchParams } = new URL(request.url)
+    const conversationId = searchParams.get('conversation_id')
+
     // 从数据库获取聊天记录
-    const chatHistory = chatOperations.getByUser.all(
-      currentUser.studentId,
-      currentUser.courseId,
-    ) as any[]
+    let chatHistory: any[]
+
+    if (conversationId) {
+      // 按对话ID筛选
+      chatHistory = chatOperations.getByConversation.all(
+        currentUser.studentId,
+        currentUser.courseId,
+        conversationId,
+      ) as any[]
+    }
+    else {
+      // 获取所有聊天记录
+      chatHistory = chatOperations.getByUser.all(
+        currentUser.studentId,
+        currentUser.courseId,
+      ) as any[]
+    }
 
     // 转换数据格式
     const formattedHistory = chatHistory.map(record => ({
@@ -106,14 +124,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: formattedHistory,
+      messages: formattedHistory,
       count: formattedHistory.length,
     })
   }
   catch (error) {
     console.error('获取聊天记录失败:', error)
     return NextResponse.json(
-      { success: false, message: '获取聊天记录失败', data: [] },
+      { success: false, message: '获取聊天记录失败', messages: [] },
       { status: 500 },
     )
   }

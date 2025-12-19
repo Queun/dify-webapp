@@ -10,6 +10,7 @@ import Sidebar from '@/app/components/sidebar'
 import ConfigSence from '@/app/components/config-scence'
 import Header from '@/app/components/header'
 import { fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, updateFeedback } from '@/service'
+import { saveChatMessage, getChatHistory } from '@/service/chat'
 import type { ChatItem, ConversationItem, Feedbacktype, PromptConfig, VisionFile, VisionSettings } from '@/types/app'
 import type { FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
 import { Resolution, TransferMethod, WorkflowRunningStatus } from '@/types/app'
@@ -128,33 +129,88 @@ const Main: FC<IMainProps> = () => {
 
     // update chat list of current conversation
     if (!isNewConversation && !conversationIdChangeBecauseOfNew && !isResponding) {
-      fetchChatList(currConversationId).then((res: any) => {
-        const { data } = res
+      // 优先从本地数据库恢复聊天历史
+      getChatHistory(currConversationId).then((historyResult) => {
         const newChatList: ChatItem[] = generateNewChatListWithOpenStatement(notSyncToStateIntroduction, notSyncToStateInputs)
 
-        data.forEach((item: any) => {
-          newChatList.push({
-            id: `question-${item.id}`,
-            content: item.query,
-            isAnswer: false,
-            message_files: item.message_files?.filter((file: any) => file.belongs_to === 'user') || [],
+        if (historyResult.success && historyResult.messages && historyResult.messages.length > 0) {
+          // 从本地数据库恢复
+          historyResult.messages.forEach((msg: any) => {
+            const chatItem: ChatItem = {
+              id: msg.messageId,
+              content: msg.content,
+              isAnswer: msg.messageType === 'answer',
+            }
 
+            // 解析metadata
+            if (msg.metadata) {
+              try {
+                const metadata = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : msg.metadata
+                if (metadata.message_files)
+                { chatItem.message_files = metadata.message_files }
+                if (metadata.agent_thoughts)
+                { chatItem.agent_thoughts = metadata.agent_thoughts }
+                if (metadata.feedback)
+                { chatItem.feedback = metadata.feedback }
+                if (metadata.annotation)
+                { chatItem.annotation = metadata.annotation }
+                if (metadata.workflow_run_id)
+                { chatItem.workflow_run_id = metadata.workflow_run_id }
+                if (metadata.workflowProcess)
+                { chatItem.workflowProcess = metadata.workflowProcess }
+
+                // 解析RPA/PSA内容
+                if (msg.messageType === 'answer' && msg.content) {
+                  chatItem._parsed = parseMessageContent(msg.content)
+                }
+              }
+              catch (err) {
+                console.error('[Restore Chat] Parse metadata error:', err)
+              }
+            }
+
+            newChatList.push(chatItem)
           })
+          setChatList(newChatList)
+        }
+        else {
+          // 如果本地数据库没有记录，从Dify API获取
+          fetchChatList(currConversationId).then((res: any) => {
+            const { data } = res
 
-          // Parse RPA/PSA content for historical messages
-          const answerContent = item.answer || ''
-          const parsedMessage = parseMessageContent(answerContent)
+            data.forEach((item: any) => {
+              newChatList.push({
+                id: `question-${item.id}`,
+                content: item.query,
+                isAnswer: false,
+                message_files: item.message_files?.filter((file: any) => file.belongs_to === 'user') || [],
 
-          newChatList.push({
-            id: item.id,
-            content: answerContent,
-            agent_thoughts: addFileInfos(item.agent_thoughts ? sortAgentSorts(item.agent_thoughts) : item.agent_thoughts, item.message_files),
-            feedback: item.feedback,
-            isAnswer: true,
-            message_files: item.message_files?.filter((file: any) => file.belongs_to === 'assistant') || [],
-            _parsed: parsedMessage, // Cache parsed result
+              })
+
+              // Parse RPA/PSA content for historical messages
+              const answerContent = item.answer || ''
+              const parsedMessage = parseMessageContent(answerContent)
+
+              newChatList.push({
+                id: item.id,
+                content: answerContent,
+                agent_thoughts: addFileInfos(item.agent_thoughts ? sortAgentSorts(item.agent_thoughts) : item.agent_thoughts, item.message_files),
+                feedback: item.feedback,
+                isAnswer: true,
+                message_files: item.message_files?.filter((file: any) => file.belongs_to === 'assistant') || [],
+                _parsed: parsedMessage, // Cache parsed result
+              })
+            })
+            setChatList(newChatList)
+          }).catch((error) => {
+            console.error('[Restore Chat] Fetch from Dify API error:', error)
+            setChatList(newChatList)
           })
-        })
+        }
+      }).catch((error) => {
+        console.error('[Restore Chat] Get history error:', error)
+        // 出错时设置空列表
+        const newChatList: ChatItem[] = generateNewChatListWithOpenStatement(notSyncToStateIntroduction, notSyncToStateInputs)
         setChatList(newChatList)
       })
     }
@@ -420,6 +476,20 @@ const Main: FC<IMainProps> = () => {
     const newList = [...getChatList(), questionItem, placeholderAnswerItem]
     setChatList(newList)
 
+    // 保存问题消息到数据库
+    const currConvId = getCurrConversationId() || prevTempNewConversationId
+    if (currentUser && currConvId && currConvId !== '-1') {
+      saveChatMessage({
+        conversationId: currConvId,
+        messageId: questionId,
+        messageType: 'question',
+        content: message,
+        metadata: {
+          message_files: questionItem.message_files,
+        },
+      }).catch(err => console.error('[Save Question] Error:', err))
+    }
+
     let isAgentMode = false
 
     // answer
@@ -484,6 +554,27 @@ const Main: FC<IMainProps> = () => {
         resetNewConversationInputs()
         setChatNotStarted()
         setCurrConversationId(tempNewConversationId, APP_ID, true)
+
+        // 保存回答消息到数据库
+        const currentUser = getCurrentUser()
+        const finalConvId = tempNewConversationId || getCurrConversationId()
+        if (currentUser && !hasError && responseItem.content && finalConvId && finalConvId !== '-1') {
+          saveChatMessage({
+            conversationId: finalConvId,
+            messageId: responseItem.id,
+            messageType: 'answer',
+            content: responseItem.content,
+            metadata: {
+              agent_thoughts: responseItem.agent_thoughts,
+              message_files: responseItem.message_files,
+              feedback: responseItem.feedback,
+              annotation: responseItem.annotation,
+              workflow_run_id: responseItem.workflow_run_id,
+              workflowProcess: responseItem.workflowProcess,
+            },
+          }).catch(err => console.error('[Save Answer] Error:', err))
+        }
+
         setRespondingFalse()
       },
       onFile(file) {
