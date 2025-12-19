@@ -1,6 +1,6 @@
 'use client'
 import type { FC } from 'react'
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowRightOnRectangleIcon,
@@ -8,7 +8,8 @@ import {
   PencilSquareIcon,
 } from '@heroicons/react/24/solid'
 import AppIcon from '@/app/components/base/app-icon'
-import { getCurrentUser, logout } from '@/utils/auth'
+import { verifyUser, userLogout } from '@/service/auth'
+import type { CurrentUser } from '@/types/auth'
 import Toast from '@/app/components/base/toast'
 
 export interface IHeaderProps {
@@ -25,10 +26,21 @@ const Header: FC<IHeaderProps> = ({
   onCreateNewChat,
 }) => {
   const router = useRouter()
-  const currentUser = getCurrentUser()
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
 
-  const handleLogout = () => {
-    logout()
+  // 获取当前用户信息
+  useEffect(() => {
+    const loadUser = async () => {
+      const { isLoggedIn, user } = await verifyUser()
+      if (isLoggedIn && user) {
+        setCurrentUser(user)
+      }
+    }
+    loadUser()
+  }, [])
+
+  const handleLogout = async () => {
+    await userLogout()
     Toast.notify({
       type: 'success',
       message: '已退出登录',

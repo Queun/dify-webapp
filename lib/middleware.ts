@@ -1,10 +1,9 @@
 /**
- * API路由中间件 - 认证和会话验证
+ * API路由中间件 - 认证和会话验证（简化版，无JWT）
  */
 
 import type { NextRequest } from 'next/server'
 import { cookies } from 'next/headers'
-import { verifyToken } from './auth'
 import { sessionOperations } from './db'
 
 export interface UserSession {
@@ -31,22 +30,24 @@ export async function verifyUserFromCookie(request: NextRequest): Promise<UserSe
       return null
     }
 
-    // 验证JWT token
-    const payload = await verifyToken(token)
-    if (!payload || payload.type !== 'user') {
-      return null
-    }
-
-    // 检查数据库中的session是否存在且未过期
+    // 直接检查数据库中的session是否存在且未过期
     const session = sessionOperations.getUserSession.get(token) as any
     if (!session) {
       return null
     }
 
+    // 检查是否过期
+    const expiresAt = new Date(session.expires_at)
+    if (expiresAt < new Date()) {
+      // Session已过期，删除
+      sessionOperations.deleteUserSession.run(token)
+      return null
+    }
+
     return {
-      studentId: payload.studentId,
-      courseId: payload.courseId,
-      name: payload.name,
+      studentId: session.student_id,
+      courseId: session.course_id,
+      name: session.name,
       token,
     }
   }
@@ -68,20 +69,22 @@ export async function verifyAdminFromCookie(request: NextRequest): Promise<Admin
       return null
     }
 
-    // 验证JWT token
-    const payload = await verifyToken(token)
-    if (!payload || payload.type !== 'admin') {
-      return null
-    }
-
-    // 检查数据库中的session是否存在且未过期
+    // 直接检查数据库中的session是否存在且未过期
     const session = sessionOperations.getAdminSession.get(token) as any
     if (!session) {
       return null
     }
 
+    // 检查是否过期
+    const expiresAt = new Date(session.expires_at)
+    if (expiresAt < new Date()) {
+      // Session已过期，删除
+      sessionOperations.deleteAdminSession.run(token)
+      return null
+    }
+
     return {
-      isAdmin: payload.isAdmin,
+      isAdmin: true,
       token,
     }
   }
