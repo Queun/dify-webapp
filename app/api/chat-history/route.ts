@@ -13,11 +13,14 @@ export async function POST(request: NextRequest) {
     const currentUser = await getServerCurrentUser(request)
 
     if (!currentUser) {
+      console.log('[Chat History POST] 用户未登录')
       return NextResponse.json(
         { success: false, message: '未登录' },
         { status: 401 },
       )
     }
+
+    console.log('[Chat History POST] 用户已认证:', currentUser.studentId)
 
     const body = await request.json()
     const {
@@ -28,8 +31,16 @@ export async function POST(request: NextRequest) {
       metadata,
     } = body
 
+    console.log('[Chat History POST] 接收到数据:', {
+      conversationId,
+      messageId,
+      messageType,
+      contentLength: content?.length || 0,
+    })
+
     // 验证必填字段
     if (!conversationId || !messageType || !content) {
+      console.log('[Chat History POST] 缺少必填字段')
       return NextResponse.json(
         { success: false, message: '缺少必填字段' },
         { status: 400 },
@@ -38,6 +49,7 @@ export async function POST(request: NextRequest) {
 
     // 验证 messageType
     if (!['question', 'answer'].includes(messageType)) {
+      console.log('[Chat History POST] messageType 无效:', messageType)
       return NextResponse.json(
         { success: false, message: 'messageType 必须是 question 或 answer' },
         { status: 400 },
@@ -45,6 +57,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 保存到数据库
+    console.log('[Chat History POST] 准备保存到数据库')
     chatOperations.create.run(
       currentUser.studentId,
       currentUser.courseId,
@@ -54,6 +67,7 @@ export async function POST(request: NextRequest) {
       content,
       metadata ? JSON.stringify(metadata) : null,
     )
+    console.log('[Chat History POST] 保存成功')
 
     return NextResponse.json({
       success: true,
@@ -61,7 +75,7 @@ export async function POST(request: NextRequest) {
     })
   }
   catch (error) {
-    console.error('保存聊天记录失败:', error)
+    console.error('[Chat History POST] 保存聊天记录失败:', error)
     return NextResponse.json(
       { success: false, message: '保存聊天记录失败' },
       { status: 500 },
