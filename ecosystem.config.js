@@ -2,7 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'dify-webapp',
-      script: '.next/standalone/server.js',
+      script: 'node_modules/next/dist/bin/next',
+      args: 'start',
       cwd: '/opt/dify-webapp',
       instances: 1,
       exec_mode: 'fork',

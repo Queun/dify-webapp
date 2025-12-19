@@ -16,7 +16,7 @@ const nextConfig = {
     // https://nextjs.org/docs/api-reference/next.config.js/ignoring-typescript-errors
     ignoreBuildErrors: true,
   },
-  output: 'standalone',
+  // output: 'standalone',  // 注释掉以避免 better-sqlite3 native 模块问题
 }
 
 module.exports = nextConfig
